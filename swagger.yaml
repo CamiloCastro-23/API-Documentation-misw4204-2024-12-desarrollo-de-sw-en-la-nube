@@ -8,27 +8,51 @@ paths:
       tags:
         - auth
       summary: Auth Signup
-      description: Permite crear una cuenta con los campos para nombre de usuario, correo electrónico y contraseña. El nombre y el correo electrónico deben ser únicos en la plataforma, mientras que la contraseña debe seguir unos lineamientos mínimos de seguridad. Adicionalmente, la clave debe ser solicitada dos veces para que el usuario confirme que la ingresa de forma correcta.
+      description: Allows you to create an account with fields for username, email, and password. The name and email must be unique on the platform, while the password must follow minimum security guidelines. Additionally, the password must be entered twice for the user to confirm that it is entered correctly.
       operationId: auth_signup_api_auth_signup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsersCreate'
+        required: true
       responses:
-        '200':
+        '201':
           description: Successful Response
           content:
             application/json:
               schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/auth/login:
-    get:
+    post:
       tags:
         - auth
       summary: Auth Login
-      description: Permite recuperar el token de autorización para consumir los recursos del API suministrando el nombre de usuario y la contraseña de una cuenta previamente registrada.
-      operationId: auth_login_api_auth_login_get
+      description: Allows you to retrieve the authorization token to consume the API resources by providing the username and password of a previously registered account.
+      operationId: auth_login_api_auth_login_post
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Body_auth_login_api_auth_login_post'
+        required: true
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/tasks:
     get:
       tags:
@@ -42,6 +66,8 @@ paths:
           content:
             application/json:
               schema: {}
+      security:
+        - OAuth2PasswordBearer: []
     post:
       tags:
         - tasks
@@ -66,6 +92,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+        - OAuth2PasswordBearer: []
   /api/tasks/{id_task}:
     get:
       tags:
@@ -73,6 +101,8 @@ paths:
       summary: Read Task By Id
       description: Permite recuperar la información de una tarea en la aplicación. El usuario requiere autorización.
       operationId: read_task_by_id_api_tasks__id_task__get
+      security:
+        - OAuth2PasswordBearer: []
       parameters:
         - name: id_task
           in: path
@@ -98,6 +128,8 @@ paths:
       summary: Delete Task By Id
       description: Permite eliminar una tarea en la aplicación. El usuario requiere autorización.
       operationId: delete_task_by_id_api_tasks__id_task__delete
+      security:
+        - OAuth2PasswordBearer: []
       parameters:
         - name: id_task
           in: path
@@ -124,6 +156,8 @@ paths:
       summary: Update Task To Processed
       description: Permite recuperar la información de una tarea en la aplicación. El usuario requiere autorización.
       operationId: update_task_to_processed_api_tasks_to_processed__id_task__put
+      security:
+        - OAuth2PasswordBearer: []
       parameters:
         - name: id_task
           in: path
@@ -145,39 +179,113 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
-    Body_crear_tasks_api_tasks_post:
+    Body_auth_login_api_auth_login_post:
+      properties:
+        grant_type:
+          anyOf:
+            - type: string
+              pattern: password
+            - type: null
+          title: Grant Type
+        username:
+          type: string
+          title: Username
+        password:
+          type: string
+          title: Password
+        scope:
+          type: string
+          title: Scope
+          default: ''
+        client_id:
+          anyOf:
+            - type: string
+            - type: null
+          title: Client Id
+        client_secret:
+          anyOf:
+            - type: string
+            - type: null
+          title: Client Secret
       type: object
+      required:
+        - username
+        - password
+      title: Body_auth_login_api_auth_login_post
+    Body_crear_tasks_api_tasks_post:
       properties:
         file:
           type: string
           format: binary
           title: File
+      type: object
       required:
         - file
       title: Body_crear_tasks_api_tasks_post
     HTTPValidationError:
-      type: object
       properties:
         detail:
-          type: array
           items:
             $ref: '#/components/schemas/ValidationError'
-      title: HTTPValidationError
-    ValidationError:
+          type: array
+          title: Detail
       type: object
+      title: HTTPValidationError
+    UsersCreate:
+      properties:
+        email:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Email
+        username:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Username
+        password1:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Password1
+        password2:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Password2
+      type: object
+      required:
+        - email
+        - username
+        - password1
+        - password2
+      title: UsersCreate
+      description: This class represents the model for creating a new user.
+    ValidationError:
       properties:
         loc:
-          type: array
           items:
             anyOf:
               - type: string
               - type: integer
+          type: array
+          title: Location
         msg:
           type: string
+          title: Message
         type:
           type: string
+          title: Error Type
+      type: object
       required:
         - loc
         - msg
         - type
       title: ValidationError
+  securitySchemes:
+    OAuth2PasswordBearer:
+      type: oauth2
+      flows:
+        password:
+          scopes: {}
+          tokenUrl: auth/token
